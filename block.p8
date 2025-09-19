@@ -1,5 +1,45 @@
 pico-8 cartridge // http://www.pico-8.com
 version 43
+__lua__
+--falling block game
+--by songbird
+
+function _init()
+  init_board()
+end
+
+function _update()
+end
+
+function _draw()
+  cls()
+  draw_board()
+end
+
+function init_board()
+  block_size = 8
+  left = 32
+  right = 96
+  top = 16
+  bottom = 112
+end
+
+function draw_board()
+  line(left, top, left, bottom)
+  line(right, top, right, bottom)
+  line(left, bottom, right, bottom)
+
+  local x, y = left + block_size, top
+  repeat
+    repeat
+      line(x, y, x, y)
+      y += block_size
+    until y >= bottom
+    x += block_size
+    y = top
+  until x >= right
+end
+
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000555555555555555555555555555555555555555555555555000000000000000000000000000000000000000000000000000000000000000000000000
