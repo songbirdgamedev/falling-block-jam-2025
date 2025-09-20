@@ -49,7 +49,7 @@ end
 function init_blocks()
   num_colors = 4
   blocks = {}
-  falling = {}
+  falling = false
 end
 
 --converts grid coords to pixel coords
@@ -60,10 +60,9 @@ function convert_coords(x, y)
 end
 
 function spawn_block()
-  falling = {
-    make_block(3, 0),
-    make_block(3, 1)
-  }
+  falling = true
+  a = make_block(3, 0)
+  b = make_block(3, 1)
 end
 
 function make_block(x, y)
@@ -77,50 +76,84 @@ function make_block(x, y)
   }
 end
 
-function move_left(block)
-  if block.x > left then
-    block.x -= block_size
+function move_left()
+  if min(a.x, b.x) > left then
+    a.x -= block_size
+    b.x -= block_size
   end
 end
 
-function move_right(block)
-  if block.x < right - block_size then
-    block.x += block_size
+function move_right()
+  if max(a.x, b.x) < right - block_size then
+    a.x += block_size
+    b.x += block_size
   end
 end
 
-function move_down(block)
-  block.y += block_size
+function move_down()
+  if max(a.y, b.y) < bottom - block_size then
+    a.y += block_size
+    b.y += block_size
+  end
+end
+
+function rotate_clockwise()
+  if b.x > a.x then
+    b.x = a.x
+    b.y = b.y + block_size
+  elseif b.y > a.y then
+    b.x = a.x - block_size
+    b.y = a.y
+  elseif b.x < a.x then
+    b.x = a.x
+    b.y = b.y - block_size
+  elseif b.y < a.y then
+    b.x = a.x + block_size
+    b.y = a.y
+  end
+end
+
+function rotate_anticlockwise()
+  if b.x > a.x then
+    b.x = a.x
+    b.y = b.y - block_size
+  elseif b.y > a.y then
+    b.x = a.x + block_size
+    b.y = a.y
+  elseif b.x < a.x then
+    b.x = a.x
+    b.y = b.y + block_size
+  elseif b.y < a.y then
+    b.x = a.x - block_size
+    b.y = a.y
+  end
 end
 
 function update_blocks()
   if btnp(⬅️) then
-    --move left
-    foreach(falling, move_left)
+    move_left()
   end
   if btnp(➡️) then
-    --move right
-    foreach(falling, move_right)
+    move_right()
   end
-  if btnp(⬇️)
-      and falling[1].y < bottom - block_size * 2 then
-    --move down
-    foreach(falling, move_down)
+  if btnp(⬇️) then
+    move_down()
   end
   if btnp(❎) then
-    --rotate clockwise
+    rotate_clockwise()
   end
   if btnp(🅾️) then
-    --rotate anticlockwise
+    rotate_anticlockwise()
   end
 
-  if #falling == 0 then
+  if not falling then
     spawn_block()
   end
 end
 
 function draw_blocks()
-  foreach(falling, draw_block)
+  draw_block(a)
+  draw_block(b)
   foreach(blocks, draw_block)
 end
 
