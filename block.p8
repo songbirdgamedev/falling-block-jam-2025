@@ -5,18 +5,21 @@ __lua__
 --by songbird
 
 function _init()
-  init_board()
+  init_grid()
+  init_blocks()
 end
 
 function _update()
+  update_blocks()
 end
 
 function _draw()
   cls()
-  draw_board()
+  draw_grid()
+  draw_blocks()
 end
 
-function init_board()
+function init_grid()
   block_size = 8
   left = 32
   right = 96
@@ -24,7 +27,7 @@ function init_board()
   bottom = 112
 end
 
-function draw_board()
+function draw_grid()
   line(left, top, left, bottom)
   line(right, top, right, bottom)
   line(left, bottom, right, bottom)
@@ -38,6 +41,95 @@ function draw_board()
     x += block_size
     y = top
   until x >= right
+end
+
+-->8
+--blocks
+
+function init_blocks()
+  num_colors = 4
+  blocks = {}
+  falling = {}
+end
+
+--converts grid coords to pixel coords
+function convert_coords(x, y)
+  local x = left + x * block_size
+  local y = top + y * block_size
+  return x, y
+end
+
+function spawn_block()
+  falling = {
+    make_block(3, 0),
+    make_block(3, 1)
+  }
+end
+
+function make_block(x, y)
+  --random int of 1, 2, 3, 4
+  local sprite = ceil(rnd(num_colors))
+  local x, y = convert_coords(x, y)
+  return {
+    sprite = sprite,
+    x = x,
+    y = y
+  }
+end
+
+function move_left(block)
+  if block.x > left then
+    block.x -= block_size
+  end
+end
+
+function move_right(block)
+  if block.x < right - block_size then
+    block.x += block_size
+  end
+end
+
+function move_down(block)
+  block.y += block_size
+end
+
+function update_blocks()
+  if btnp(⬅️) then
+    --move left
+    foreach(falling, move_left)
+  end
+  if btnp(➡️) then
+    --move right
+    foreach(falling, move_right)
+  end
+  if btnp(⬇️)
+      and falling[1].y < bottom - block_size * 2 then
+    --move down
+    foreach(falling, move_down)
+  end
+  if btnp(❎) then
+    --rotate clockwise
+  end
+  if btnp(🅾️) then
+    --rotate anticlockwise
+  end
+
+  if #falling == 0 then
+    spawn_block()
+  end
+end
+
+function draw_blocks()
+  foreach(falling, draw_block)
+  foreach(blocks, draw_block)
+end
+
+function draw_block(block)
+  spr(
+    block.sprite,
+    block.x,
+    block.y
+  )
 end
 
 __gfx__
