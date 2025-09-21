@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 43
 __lua__
---falling block game
+--cassette match
 --by songbird
 
 function _init()
@@ -9,7 +9,8 @@ function _init()
   s = {
     fall = 1,
     drop = 2,
-    match = 3
+    match = 3,
+    lose = 4
   }
   init_grid()
   init_blocks()
@@ -23,6 +24,8 @@ function _update()
     update_drop()
   elseif state == s.match then
     update_match()
+  elseif state == s.lose then
+    update_lose()
   end
 end
 
@@ -36,6 +39,8 @@ function _draw()
     draw_drop()
   elseif state == s.match then
     draw_match()
+  elseif state == s.lose then
+    draw_lose()
   end
 end
 
@@ -117,7 +122,21 @@ function init_fall()
   state = s.fall
   tick = 0
   rate = 0.05
-  spawn_block()
+
+  if not check_lose() then
+    spawn_block()
+  else
+    init_lose()
+  end
+end
+
+function check_lose()
+  for i = 0, 7 do
+    if blocks[i .. "," .. 0] then
+      return true
+    end
+  end
+  return false
 end
 
 function spawn_block()
@@ -440,6 +459,26 @@ end
 
 function draw_match()
   foreach(to_drop, draw_block)
+end
+
+-->8
+--lose
+
+function init_lose()
+  state = s.lose
+end
+
+function update_lose()
+  if btnp(❎) or btnp(🅾️) then
+    _init()
+  end
+end
+
+function draw_lose()
+  rectfill(left + 1, 52, right - 1, 74, 0)
+  print("game over :(", 41, 54, 7)
+  print("press ❎/🅾️", 43, 61, 6)
+  print("to play again", 39, 68, 6)
 end
 
 __gfx__
