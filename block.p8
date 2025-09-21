@@ -424,6 +424,7 @@ function add_match(b)
 end
 
 function resolve_match()
+  print "\aceg"
   foreach(matches, del_block)
   foreach(matches, check_above)
   to_check = {}
@@ -468,6 +469,7 @@ end
 
 function init_lose()
   state = s.lose
+  print "\ae..c"
 end
 
 function update_lose()
