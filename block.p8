@@ -144,18 +144,9 @@ end
 
 --checks for object at given coords
 function collision(x, y)
-  if x < 0 or x > 7
-      or y < 0 or y > 11 then
-    return true
-  end
-
-  for b in all(blocks) do
-    if b.x == x and b.y == y then
-      return true
-    end
-  end
-
-  return false
+  return x < 0 or x > 7
+      or y < 0 or y > 11
+      or blocks[x .. "," .. y]
 end
 
 function can_move_down(b)
@@ -165,6 +156,79 @@ end
 function block_end()
   return not can_move_down(b1)
       or not can_move_down(b2)
+end
+
+function check_matches()
+  --check for blocks that just fell
+  check_match(b1)
+  check_match(b2)
+end
+
+function check_match(b)
+  local up = check_match_up(b)
+  local down = check_match_down(b)
+  local left = check_match_left(b)
+  local right = check_match_right(b)
+
+  if #up + #down >= 2 then
+    del_block(b)
+    foreach(up, del_block)
+    foreach(down, del_block)
+  end
+  if #left + #right >= 2 then
+    del_block(b)
+    foreach(left, del_block)
+    foreach(right, del_block)
+  end
+end
+
+function check_match_up(b)
+  local x, y = b.x, b.y - 1
+  local matches = {}
+  while check_color(x, y, b.sprite) do
+    add(matches, { x = x, y = y })
+    y -= 1
+  end
+  return matches
+end
+
+function check_match_down(b)
+  local x, y = b.x, b.y + 1
+  local matches = {}
+  while check_color(x, y, b.sprite) do
+    add(matches, { x = x, y = y })
+    y += 1
+  end
+  return matches
+end
+
+function check_match_left(b)
+  local x, y = b.x - 1, b.y
+  local matches = {}
+  while check_color(x, y, b.sprite) do
+    add(matches, { x = x, y = y })
+    x -= 1
+  end
+  return matches
+end
+
+function check_match_right(b)
+  local x, y = b.x + 1, b.y
+  local matches = {}
+  while check_color(x, y, b.sprite) do
+    add(matches, { x = x, y = y })
+    x += 1
+  end
+  return matches
+end
+
+function check_color(x, y, color)
+  return blocks[x .. "," .. y]
+      and blocks[x .. "," .. y].sprite == color
+end
+
+function del_block(b)
+  blocks[b.x .. "," .. b.y] = nil
 end
 
 function update_blocks()
@@ -210,8 +274,9 @@ function update_blocks()
     if falling then
       move_down()
     elseif r1 and r2 then
-      add(blocks, b1)
-      add(blocks, b2)
+      blocks[b1.x .. "," .. b1.y] = b1
+      blocks[b2.x .. "," .. b2.y] = b2
+      check_matches()
       ready = true
     end
 
@@ -233,7 +298,9 @@ end
 function draw_blocks()
   draw_block(b1)
   draw_block(b2)
-  foreach(blocks, draw_block)
+  for k, b in pairs(blocks) do
+    draw_block(b)
+  end
 end
 
 function draw_block(b)
