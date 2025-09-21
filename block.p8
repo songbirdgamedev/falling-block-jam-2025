@@ -52,81 +52,102 @@ function init_blocks()
   falling = false
 end
 
---converts grid coords to pixel coords
-function convert_coords(x, y)
-  local x = left + x * block_size
-  local y = top + y * block_size
-  return x, y
-end
-
 function spawn_block()
   falling = true
-  a = make_block(3, 0)
-  b = make_block(3, 1)
+  b1 = make_block(3, 0)
+  b2 = make_block(3, 1)
 end
 
 function make_block(x, y)
-  --random int of 1, 2, 3, 4
-  local sprite = ceil(rnd(num_colors))
-  local x, y = convert_coords(x, y)
   return {
-    sprite = sprite,
+    sprite = ceil(rnd(num_colors)),
     x = x,
     y = y
   }
 end
 
 function move_left()
-  if min(a.x, b.x) > left then
-    a.x -= block_size
-    b.x -= block_size
+  if not collision(b1.x - 1, b1.y)
+      and not collision(b2.x - 1, b2.y) then
+    b1.x -= 1
+    b2.x -= 1
   end
 end
 
 function move_right()
-  if max(a.x, b.x) < right - block_size then
-    a.x += block_size
-    b.x += block_size
+  if not collision(b1.x + 1, b1.y)
+      and not collision(b2.x + 1, b2.y) then
+    b1.x += 1
+    b2.x += 1
   end
 end
 
 function move_down()
-  if max(a.y, b.y) < bottom - block_size then
-    a.y += block_size
-    b.y += block_size
+  if not collision(b1.x, b1.y + 1)
+      and not collision(b2.x, b2.y + 1) then
+    b1.y += 1
+    b2.y += 1
   end
 end
 
 function rotate_clockwise()
-  if b.x > a.x then
-    b.x = a.x
-    b.y = b.y + block_size
-  elseif b.y > a.y then
-    b.x = a.x - block_size
-    b.y = a.y
-  elseif b.x < a.x then
-    b.x = a.x
-    b.y = b.y - block_size
-  elseif b.y < a.y then
-    b.x = a.x + block_size
-    b.y = a.y
+  local x, y
+
+  if b2.x > b1.x then
+    x = b1.x
+    y = b2.y + 1
+  elseif b2.y > b1.y then
+    x = b1.x - 1
+    y = b1.y
+  elseif b2.x < b1.x then
+    x = b1.x
+    y = b2.y - 1
+  elseif b2.y < b1.y then
+    x = b1.x + 1
+    y = b1.y
+  end
+
+  if not collision(x, y) then
+    b2.x, b2.y = x, y
   end
 end
 
 function rotate_anticlockwise()
-  if b.x > a.x then
-    b.x = a.x
-    b.y = b.y - block_size
-  elseif b.y > a.y then
-    b.x = a.x + block_size
-    b.y = a.y
-  elseif b.x < a.x then
-    b.x = a.x
-    b.y = b.y + block_size
-  elseif b.y < a.y then
-    b.x = a.x - block_size
-    b.y = a.y
+  local x, y
+
+  if b2.x > b1.x then
+    x = b1.x
+    y = b2.y - 1
+  elseif b2.y > b1.y then
+    x = b1.x + 1
+    y = b1.y
+  elseif b2.x < b1.x then
+    x = b1.x
+    y = b2.y + 1
+  elseif b2.y < b1.y then
+    x = b1.x - 1
+    y = b1.y
   end
+
+  if not collision(x, y) then
+    b2.x, b2.y = x, y
+  end
+end
+
+--checks for object at given coords
+function collision(x, y)
+  if x < 0 or x > 7
+      or y < 0 or y > 11 then
+    return true
+  end
+
+  for b in all(blocks) do
+    if b.x == x and b.y == y then
+      return true
+    end
+  end
+
+  return false
 end
 
 function update_blocks()
@@ -151,18 +172,21 @@ function update_blocks()
   end
 end
 
+--converts grid coords to pixel coords
+function convert_coords(x, y)
+  local x = left + x * block_size
+  local y = top + y * block_size
+  return x, y
+end
+
 function draw_blocks()
-  draw_block(a)
-  draw_block(b)
+  draw_block(b1)
+  draw_block(b2)
   foreach(blocks, draw_block)
 end
 
-function draw_block(block)
-  spr(
-    block.sprite,
-    block.x,
-    block.y
-  )
+function draw_block(b)
+  spr(b.sprite, convert_coords(b.x, b.y))
 end
 
 __gfx__
