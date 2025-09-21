@@ -50,10 +50,17 @@ function init_blocks()
   num_colors = 4
   blocks = {}
   falling = false
+  ready = true
+  tick = 0
+  rate = 0.05
 end
 
 function spawn_block()
+  vert = true
   falling = true
+  ready = false
+  r1 = false
+  r2 = false
   b1 = make_block(3, 0)
   b2 = make_block(3, 1)
 end
@@ -83,8 +90,7 @@ function move_right()
 end
 
 function move_down()
-  if not collision(b1.x, b1.y + 1)
-      and not collision(b2.x, b2.y + 1) then
+  if not block_end() then
     b1.y += 1
     b2.y += 1
   end
@@ -109,6 +115,7 @@ function rotate_clockwise()
 
   if not collision(x, y) then
     b2.x, b2.y = x, y
+    vert = not vert
   end
 end
 
@@ -131,6 +138,7 @@ function rotate_anticlockwise()
 
   if not collision(x, y) then
     b2.x, b2.y = x, y
+    vert = not vert
   end
 end
 
@@ -150,24 +158,67 @@ function collision(x, y)
   return false
 end
 
+function can_move_down(b)
+  return not collision(b.x, b.y + 1)
+end
+
+function block_end()
+  return not can_move_down(b1)
+      or not can_move_down(b2)
+end
+
 function update_blocks()
-  if btnp(⬅️) then
-    move_left()
-  end
-  if btnp(➡️) then
-    move_right()
-  end
-  if btnp(⬇️) then
-    move_down()
-  end
-  if btnp(❎) then
-    rotate_clockwise()
-  end
-  if btnp(🅾️) then
-    rotate_anticlockwise()
+  if falling then
+    if btnp(⬅️) then
+      move_left()
+    end
+    if btnp(➡️) then
+      move_right()
+    end
+    if btnp(⬇️) then
+      move_down()
+    end
+    if btnp(❎) then
+      rotate_clockwise()
+    end
+    if btnp(🅾️) then
+      rotate_anticlockwise()
+    end
   end
 
-  if not falling then
+  tick += rate
+  if tick >= 1 then
+    if block_end() then
+      falling = false
+      if vert then
+        r1 = true
+        r2 = true
+      else
+        if can_move_down(b1) then
+          b1.y += 1
+        else
+          r1 = true
+        end
+        if can_move_down(b2) then
+          b2.y += 1
+        else
+          r2 = true
+        end
+      end
+    end
+
+    if falling then
+      move_down()
+    elseif r1 and r2 then
+      add(blocks, b1)
+      add(blocks, b2)
+      ready = true
+    end
+
+    tick = 0
+  end
+
+  if ready then
     spawn_block()
   end
 end
