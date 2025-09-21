@@ -5,19 +5,42 @@ __lua__
 --by songbird
 
 function _init()
+  --states
+  s = {
+    fall = 1,
+    drop = 2,
+    match = 3
+  }
   init_grid()
   init_blocks()
+  init_fall()
 end
 
 function _update()
-  update_blocks()
+  if state == s.fall then
+    update_fall()
+  elseif state == s.drop then
+    update_drop()
+  elseif state == s.match then
+    update_match()
+  end
 end
 
 function _draw()
   cls()
   draw_grid()
   draw_blocks()
+  if state == s.fall then
+    draw_fall()
+  elseif state == s.drop then
+    draw_drop()
+  elseif state == s.match then
+    draw_match()
+  end
 end
+
+-->8
+--grid
 
 function init_grid()
   block_size = 8
@@ -28,19 +51,30 @@ function init_grid()
 end
 
 function draw_grid()
-  line(left, top, left, bottom)
-  line(right, top, right, bottom)
-  line(left, bottom, right, bottom)
+  line(
+    left, top,
+    left, bottom
+  )
+  line(
+    right, top,
+    right, bottom
+  )
+  line(
+    left, bottom,
+    right, bottom
+  )
 
-  local x, y = left + block_size, top
-  repeat
-    repeat
+  local x = left + block_size
+  local y = top
+
+  while x < right do
+    while y < bottom do
       line(x, y, x, y)
       y += block_size
-    until y >= bottom
+    end
     x += block_size
     y = top
-  until x >= right
+  end
 end
 
 -->8
@@ -49,18 +83,45 @@ end
 function init_blocks()
   num_colors = 4
   blocks = {}
-  falling = false
-  ready = true
+end
+
+function add_block(b)
+  blocks[b.x .. "," .. b.y] = b
+end
+
+function del_block(b)
+  blocks[b.x .. "," .. b.y] = nil
+end
+
+function draw_blocks()
+  for k, b in pairs(blocks) do
+    draw_block(b)
+  end
+end
+
+function draw_block(b)
+  spr(b.sprite, convert_coords(b.x, b.y))
+end
+
+--converts grid coords to pixel coords
+function convert_coords(x, y)
+  local x = left + x * block_size
+  local y = top + y * block_size
+  return x, y
+end
+
+-->8
+--falling
+
+function init_fall()
+  state = s.fall
   tick = 0
   rate = 0.05
+  spawn_block()
 end
 
 function spawn_block()
   vert = true
-  falling = true
-  ready = false
-  r1 = false
-  r2 = false
   b1 = make_block(3, 0)
   b2 = make_block(3, 1)
 end
@@ -71,6 +132,34 @@ function make_block(x, y)
     x = x,
     y = y
   }
+end
+
+function update_fall()
+  if btnp(⬅️) then
+    move_left()
+  end
+  if btnp(➡️) then
+    move_right()
+  end
+  if btnp(⬇️) then
+    move_down()
+  end
+  if btnp(❎) then
+    rotate_clockwise()
+  end
+  if btnp(🅾️) then
+    rotate_anticlockwise()
+  end
+
+  tick += rate
+  if tick >= 1 then
+    if block_end() then
+      init_drop()
+    end
+
+    move_down()
+    tick = 0
+  end
 end
 
 function move_left()
@@ -158,28 +247,110 @@ function block_end()
       or not can_move_down(b2)
 end
 
+function draw_fall()
+  draw_block(b1)
+  draw_block(b2)
+end
+
+-->8
+--dropping
+
+function init_drop()
+  state = s.drop
+  tick = 0
+  rate = 0.1
+  r1, r2 = false, false
+end
+
+function update_drop()
+  tick += rate
+  if tick >= 1 then
+    if vert then
+      r1, r2 = true, true
+    else
+      if can_move_down(b1) then
+        b1.y += 1
+      else
+        r1 = true
+      end
+      if can_move_down(b2) then
+        b2.y += 1
+      else
+        r2 = true
+      end
+    end
+
+    if r1 and r2 then
+      end_drop()
+    end
+
+    tick = 0
+  end
+end
+
+function end_drop()
+  add_block(b1)
+  add_block(b2)
+  init_match({ b1, b2 })
+end
+
+function draw_drop()
+  draw_block(b1)
+  draw_block(b2)
+end
+
+-->8
+--matching
+
+function init_match(dropped)
+  state = s.match
+  to_check = dropped
+  matches = {}
+  to_drop = {}
+  check_matches()
+end
+
 function check_matches()
-  --check for blocks that just fell
-  check_match(b1)
-  check_match(b2)
+  local matched = false
+
+  --check blocks that just dropped
+  for b in all(to_check) do
+    if check_match(b) then
+      matched = true
+    end
+  end
+
+  if not matched then
+    init_fall()
+    return
+  end
+
+  resolve_match()
 end
 
 function check_match(b)
+  local matched = false
   local up = check_match_up(b)
   local down = check_match_down(b)
   local left = check_match_left(b)
   local right = check_match_right(b)
 
   if #up + #down >= 2 then
-    del_block(b)
-    foreach(up, del_block)
-    foreach(down, del_block)
+    matched = true
+    foreach(up, add_match)
+    foreach(down, add_match)
   end
   if #left + #right >= 2 then
-    del_block(b)
-    foreach(left, del_block)
-    foreach(right, del_block)
+    matched = true
+    foreach(left, add_match)
+    foreach(right, add_match)
   end
+
+  if matched then
+    add_match(b)
+  end
+
+  return matched
 end
 
 function check_match_up(b)
@@ -227,84 +398,48 @@ function check_color(x, y, color)
       and blocks[x .. "," .. y].sprite == color
 end
 
-function del_block(b)
-  blocks[b.x .. "," .. b.y] = nil
+function add_match(b)
+  add(matches, { x = b.x, y = b.y })
 end
 
-function update_blocks()
-  if falling then
-    if btnp(⬅️) then
-      move_left()
-    end
-    if btnp(➡️) then
-      move_right()
-    end
-    if btnp(⬇️) then
-      move_down()
-    end
-    if btnp(❎) then
-      rotate_clockwise()
-    end
-    if btnp(🅾️) then
-      rotate_anticlockwise()
-    end
-  end
+function resolve_match()
+  foreach(matches, del_block)
+  foreach(matches, check_above)
+  to_check = {}
+end
 
+function check_above(b)
+  if blocks[b.x .. "," .. b.y - 1] then
+    local b = blocks[b.x .. "," .. b.y - 1]
+    del_block(b)
+    add(to_drop, b)
+    check_above(b)
+  end
+end
+
+function update_match()
   tick += rate
   if tick >= 1 then
-    if block_end() then
-      falling = false
-      if vert then
-        r1 = true
-        r2 = true
+    for b in all(to_drop) do
+      if can_move_down(b) then
+        b.y += 1
       else
-        if can_move_down(b1) then
-          b1.y += 1
-        else
-          r1 = true
-        end
-        if can_move_down(b2) then
-          b2.y += 1
-        else
-          r2 = true
-        end
+        del(to_drop, b)
+        add(to_check, b)
+        add_block(b)
       end
     end
 
-    if falling then
-      move_down()
-    elseif r1 and r2 then
-      blocks[b1.x .. "," .. b1.y] = b1
-      blocks[b2.x .. "," .. b2.y] = b2
-      check_matches()
-      ready = true
+    if #to_drop == 0 then
+      init_match(to_check)
     end
 
     tick = 0
   end
-
-  if ready then
-    spawn_block()
-  end
 end
 
---converts grid coords to pixel coords
-function convert_coords(x, y)
-  local x = left + x * block_size
-  local y = top + y * block_size
-  return x, y
-end
-
-function draw_blocks()
-  draw_block(b1)
-  draw_block(b2)
-  for k, b in pairs(blocks) do
-    draw_block(b)
-  end
-end
-
-function draw_block(b)
-  spr(b.sprite, convert_coords(b.x, b.y))
+function draw_match()
+  foreach(to_drop, draw_block)
 end
 
 __gfx__
